@@ -2,9 +2,6 @@ package observable
 
 import observable.server.ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import dev.architectury.event.events.common.CommandRegistrationEvent
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientPlayerEvent
@@ -12,9 +9,10 @@ import dev.architectury.event.events.client.ClientTickEvent
 import dev.architectury.event.events.common.LifecycleEvent
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
+import net.luckperms.api.LuckPerms
+import net.luckperms.api.LuckPermsProvider
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
-import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.commands.Commands.literal
 import net.minecraft.network.chat.ClickEvent
@@ -29,13 +27,11 @@ import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
-import observable.server.ContinuousPerfEval
 import observable.server.Profiler
 import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import kotlin.system.exitProcess
 
 object Observable {
     const val MOD_ID = "observable"
@@ -48,9 +44,10 @@ object Observable {
     val PROFILER: Profiler by lazy { Profiler() }
     var RESULTS: ProfilingData? = null
     val PROFILE_SCREEN by lazy { ProfileScreen() }
+    var LUCKPERMS: LuckPerms? = null
 
     fun hasPermission(player: Player) =
-        (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) ?: true)
+        PermissionHandler.hasPermission(player.uuid, "observable")
             || (GameInstance.getServer()?.isSingleplayer ?: false)
 
     @JvmStatic
@@ -167,6 +164,7 @@ object Observable {
             PROFILER.serverThread = thread
 //            ContinuousPerfEval.start()
             LOGGER.info("Registered thread ${thread.name}")
+            LUCKPERMS = LuckPermsProvider.get();
         }
 
         CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
