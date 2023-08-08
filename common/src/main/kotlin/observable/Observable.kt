@@ -2,9 +2,6 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import me.shedaniel.architectury.event.events.CommandRegistrationEvent
 import me.shedaniel.architectury.event.events.LifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
@@ -12,8 +9,9 @@ import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
+import net.luckperms.api.LuckPerms
+import net.luckperms.api.LuckPermsProvider
 import net.minecraft.client.KeyMapping
-import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.commands.Commands.literal
 import net.minecraft.network.chat.TextComponent
@@ -44,10 +42,11 @@ object Observable {
     val PROFILER: Profiler by lazy { Profiler() }
     var RESULTS: ProfilingData? = null
     val PROFILE_SCREEN by lazy { ProfileScreen() }
+    var LUCKPERMS: LuckPerms? = null
 
     fun hasPermission(player: Player) =
-        (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) ?: true)
-            || (GameInstance.getServer()?.isSingleplayer ?: false)
+            PermissionHandler.hasPermission(player.uuid, "observable")
+                    || (GameInstance.getServer()?.isSingleplayer ?: false)
 
     @JvmStatic
     fun init() {
@@ -146,6 +145,7 @@ object Observable {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
             LOGGER.info("Registered thread ${thread.name}")
+            LUCKPERMS = LuckPermsProvider.get()
         }
 
         CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
